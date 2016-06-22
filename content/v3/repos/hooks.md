@@ -1,53 +1,29 @@
 ---
-title: Repo Hooks | GitHub API
+title: Repository Webhooks
 ---
 
-# Repo Hooks API
+# Webhooks
 
-The Repository Hooks API manages the post-receive web and service hooks
-for a repository.  There are two main APIs to manage these hooks: a JSON
-HTTP API, and [PubSubHubbub](#pubsubhubbub).
+{:toc}
 
-Active hooks can be configured to trigger for one or more events.
-The default event is `push`.  The available events are:
+The Repository Webhooks API allows repository admins to manage the post-receive
+hooks for a repository.  Webhooks can be managed using the JSON HTTP API,
+or the [PubSubHubbub API](#pubsubhubbub).
 
-* `push` - Any git push to a Repository.
-* `issues` - Any time an Issue is opened or closed.
-* `issue_comment` - Any time an Issue is commented on.
-* `commit_comment` - Any time a Commit is commented on.
-* `pull_request` - Any time a Pull Request is opened, closed, or
-  synchronized (updated due to a new push in the branch that the pull
-request is tracking).
-* `gollum` - Any time a Wiki page is updated.
-* `watch` - Any time a User watches the Repository.
-* `download` - Any time a Download is added to the Repository.
-* `fork` - Any time a Repository is forked.
-* `fork_apply` - Any time a patch is applied to the Repository from the
-  Fork Queue.
-* `member` - Any time a User is added as a collaborator to a
-  non-Organization Repository. 
-* `public` - Any time a Repository changes from private to public.
+If you would like to set up a single webhook to receive events from all of your organization's repositories, check out our [API documentation for Organization Webhooks][org-hooks].
 
-The payloads for all of the hooks mirror [the payloads for the Event
-types](/v3/events/types/), with the exception of [the original `push`
-event](http://help.github.com/post-receive-hooks/).
+## List hooks
 
-For a Hook to go through, the Hook needs to be configured to trigger for
-an event, and the Service has to listen to it.  The Services are all
-part of the open source [github-services](https://github.com/github/github-services) project. Most of the Services only listen for `push` events.  However, the generic [Web Service](https://github.com/github/github-services/blob/master/services/web.rb) listens for all events.  Other services like the [IRC Service](https://github.com/github/github-services/blob/master/services/irc.rb) may only listen for `push`, `issues`, and `pull_request` events.  
-
-## List
-
-    GET /repos/:user/:repo/hooks
+    GET /repos/:owner/:repo/hooks
 
 ### Response
 
-<%= headers 200, :pagination => true %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:hook) { |h| [h] } %>
 
 ## Get single hook
 
-    GET /repos/:user/:repo/hooks/:id
+    GET /repos/:owner/:repo/hooks/:id
 
 ### Response
 
@@ -56,86 +32,66 @@ part of the open source [github-services](https://github.com/github/github-servi
 
 ## Create a hook
 
-    POST /repos/:user/:repo/hooks
+    POST /repos/:owner/:repo/hooks
 
-### Input
+**Note**: Repository service hooks (like email or Campfire) can have at most one configured at a time. Creating hooks for a service that already has one configured will [update the existing hook](#edit-a-hook).
 
-`name`
-: _Required_ **string** - The name of the service that is being called.
-See [/hooks](https://api.github.com/hooks) for the possible names.
+Repositories can have multiple webhooks installed. Each webhook should have a unique `config`. Multiple webhooks can share the same `config` as long as those webhooks do not have any `events` that overlap.
 
-`config`
-: _Required_ **hash** - A Hash containing key/value pairs to provide
-settings for this hook.  These settings vary between the services and
-are defined in the
-[github-services](https://github.com/github/github-services) repo.
-Booleans are stored internally as "1" for true, and "0" for false.  Any
-JSON true/false values will be converted automatically.
+### Parameters
 
-`events`
-: _Optional_ **array** - Determines what events the hook is triggered
-for.  Default: `["push"]`.
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | **Required**. Use `web` for a webhook or use the name of a valid service. (See <a href='https://api.github.com/hooks' data-proofer-ignore>/hooks</a> for the list of valid service names.)
+`config`|`object` | **Required**. Key/value pairs to provide settings for this hook.  These settings vary between hooks and some are defined in the [github-services](https://github.com/github/github-services) repository. Booleans are stored internally as "1" for true, and "0" for false.  Any JSON `true`/`false` values will be converted automatically.
+`events`|`array` | Determines what events the hook is triggered for.  Default: `["push"]`
+`active`|`boolean` | Determines whether the hook is actually triggered on pushes.
 
-`active`
-: _Optional_ **boolean** - Determines whether the hook is actually
-triggered on pushes.
+#### Example
+
+To create [a webhook](/webhooks), the following fields are required by the `config`:
+
+* `url`: A required string defining the URL to which the payloads will be delivered.
+* `content_type`: An optional string defining the media type used to serialize the payloads. Supported values include `json` and `form`. The default is `form`.
+* `secret`: An optional string that's passed with the HTTP requests as an `X-Hub-Signature` header. The value of this header is computed as the HMAC hex digest of the body, using the `secret` as the key.
+* `insecure_ssl`: An optional string that determines whether the SSL certificate of the host for `url` will be verified when delivering payloads. Supported values include `"0"` (verification is performed) and `"1"` (verification is not performed). The default is `"0"`.
+
+Here's how you can create a hook that posts payloads in JSON format:
 
 <%= json \
       :name => "web",
       :active => true,
+      :events => ['push', 'pull_request'],
       :config => {
-        :url => 'http://something.com/webhook'}
+        :url => 'http://example.com/webhook',
+        :content_type => 'json'}
 %>
 
 ### Response
 
-<%= headers 201,
-      :Location => 'https://api.github.com/repos/user/repo/hooks/1' %>
+<%= headers 201, :Location => get_resource(:hook)['url'] %>
 <%= json :hook %>
 
-### Edit a hook
+## Edit a hook
 
-    PATCH /repos/:user/:repo/hooks/:id
+    PATCH /repos/:owner/:repo/hooks/:id
 
-### Input
+### Parameters
 
-`name`
-: _Required_ **string** - The name of the service that is being called.
-See [/hooks](https://api.github.com/hooks) for the possible names.
-
-`config`
-: _Required_ **hash** - A Hash containing key/value pairs to provide
-settings for this hook.  Modifying this will replace the entire config
-object.  These settings vary between the services and
-are defined in the
-[github-services](https://github.com/github/github-services) repo.
-Booleans are stored internally as "1" for true, and "0" for false.  Any
-JSON true/false values will be converted automatically.
+Name | Type | Description
+-----|------|--------------
+`config`|`object` | Key/value pairs to provide settings for this hook.  Modifying this will replace the entire config object.  These settings vary between hooks and some are defined in the [github-services](https://github.com/github/github-services) repository. Booleans are stored internally as "1" for true, and "0" for false.  Any JSON `true`/`false` values will be converted automatically.
+`events`|`array` | Determines what events the hook is triggered for.  This replaces the entire array of events.  Default: `["push"]`
+`add_events`|`array` | Determines a list of events to be added to the list of events that the Hook triggers for.
+`remove_events`|`array` | Determines a list of events to be removed from the list of events that the Hook triggers for.
+`active`|`boolean` | Determines whether the hook is actually triggered on pushes.
 
 
-`events`
-: _Optional_ **array** - Determines what events the hook is triggered
-for.  This replaces the entire array of events.  Default: `["push"]`.
-
-`add_events`
-: _Optional_ **array** - Determines a list of events to be added to the
-list of events that the Hook triggers for. 
-
-`remove_events`
-: _Optional_ **array** - Determines a list of events to be removed from the
-list of events that the Hook triggers for. 
-
-`active`
-: _Optional_ **boolean** - Determines whether the hook is actually
-triggered on pushes.
+#### Example
 
 <%= json \
-      :name => "campfire",
       :active => true,
-      :config => {
-        :subdomain => 'github',
-        :room => 'Commits',
-        :token => 'abc123'}
+      :add_events => ['pull_request']
 %>
 
 ### Response
@@ -143,12 +99,26 @@ triggered on pushes.
 <%= headers 200 %>
 <%= json :hook %>
 
-## Test a hook
+## Test a `push` hook
 
 This will trigger the hook with the latest push to the current
-repository.
+repository if the hook is subscribed to `push` events. If the
+hook is not subscribed to `push` events, the server will respond
+with 204 but no test POST will be generated.
 
-    POST /repos/:user/:repo/hooks/:id/test
+    POST /repos/:owner/:repo/hooks/:id/tests
+
+**Note**: Previously `/repos/:owner/:repo/hooks/:id/test`
+
+### Response
+
+<%= headers 204 %>
+
+## Ping a hook
+
+This will trigger a [ping event][ping-event-url] to be sent to the hook.
+
+    POST /repos/:owner/:repo/hooks/:id/pings
 
 ### Response
 
@@ -156,20 +126,40 @@ repository.
 
 ## Delete a hook
 
-    DELETE /repos/:user/:repo/hooks/:id
+    DELETE /repos/:owner/:repo/hooks/:id
 
 ### Response
 
 <%= headers 204 %>
 
+## Receiving Webhooks
+
+In order for {{ site.data.variables.product.product_name }} to send webhook payloads, your server needs to be accessible from the Internet. We also highly suggest using SSL so that we can send encrypted payloads over HTTPS.
+
+### Webhook Headers
+
+GitHub will send along several HTTP headers to differentiate between event types and payload identifiers.
+
+Name | Description
+-----|-----------|
+`X-GitHub-Event` | The [event type](/v3/activity/events/types/) that was triggered.
+`X-GitHub-Delivery` | A [guid][guid] to identify the payload and event being sent.
+`X-Hub-Signature` | The value of this header is computed as the HMAC hex digest of the body, using the `secret` config option as the key.
+
 ## PubSubHubbub
 
-GitHub can also serve as a [PubSubHubbub][pubsub] hub for all repositories.  PSHB is a simple publish/subscribe protocol that lets servers register to receive updates when a topic is updated.  The updates are sent with an HTTP POST request to a callback URL.  Topic URLs for a GitHub repository's pushes are in this format:
+GitHub can also serve as a [PubSubHubbub][pubsub] hub for all repositories.
+PSHB is a simple publish/subscribe protocol
+that lets servers register to receive updates when a topic is updated.
+The updates are sent with an HTTP POST request to a callback URL.
+Topic URLs for a GitHub repository's pushes are in this format:
 
-    https://github.com/:user/:repo/events/:event 
+    https://github.com/:owner/:repo/events/:event
 
-The event can be any Event string that is listed at the top of this
+The event can be any [event][events-url] string that is listed at the top of this
 document.
+
+### Response format
 
 The default format is what [existing post-receive hooks should
 expect][post-receive]: A JSON body sent as the `payload` parameter in a
@@ -177,7 +167,9 @@ POST.  You can also specify to receive the raw JSON body with either an
 `Accept` header, or a `.json` extension.
 
     Accept: application/json
-    https://github.com/:user/:repo/events/push.json
+    https://github.com/:owner/:repo/events/push.json
+
+### Callback URLs
 
 Callback URLs can use either the `http://` protocol, or `github://`.
 `github://` callbacks specify a GitHub service.
@@ -188,36 +180,38 @@ Callback URLs can use either the `http://` protocol, or `github://`.
     # Send updates to Campfire
     github://campfire?subdomain=github&room=Commits&token=abc123
 
-The GitHub PubSubHubbub endpoint is: https://api.github.com/hub.  A
+### Subscribing
+
+The GitHub PubSubHubbub endpoint is: `https://api.github.com/hub`.
+(GitHub Enterprise users should use `http://yourhost/api/v3/hub` as the
+PubSubHubbub endpoint, but not change the `hub.topic` URI format.) A
 successful request with curl looks like:
 
-    curl -u "user:password" -i \
-      https://api.github.com/hub \
-      -F "hub.mode=subscribe" \
-      -F "hub.topic=https://github.com/:user/:repo/events/push" \
-      -F "hub.callback=http://postbin.org/123"
+``` command-line
+curl -u "user" -i \
+  https://api.github.com/hub \
+  -F "hub.mode=subscribe" \
+  -F "hub.topic=https://github.com/:owner/:repo/events/push" \
+  -F "hub.callback=http://postbin.org/123"
+```
 
 PubSubHubbub requests can be sent multiple times.  If the hook already
 exists, it will be modified according to the request.
 
-### Parameters
+#### Parameters
 
-`hub.mode`
-: _Required_ **string** - Either `subscribe` or `unsubscribe`.
+Name | Type | Description
+-----|------|--------------
+``hub.mode``|`string` | **Required**. Either `subscribe` or `unsubscribe`.
+``hub.topic``|`string` |**Required**.  The URI of the GitHub repository to subscribe to.  The path must be in the format of `/:owner/:repo/events/:event`.
+``hub.callback``|`string` | The URI to receive the updates to the topic.
+``hub.secret``|`string` | A shared secret key that generates a SHA1 HMAC of the outgoing body content.  You can verify a push came from GitHub by comparing the raw request body with the contents of the `X-Hub-Signature` header.  You can see [the PubSubHubbub documentation][pshb-secret] for more details.
 
-`hub.topic`
-: _Required_ **string** - The URI of the GitHub repository to subscribe
-to.  The path must be in the format of `/:user/:repo/events/:event`.
 
-`hub.callback`
-: _Required_ **string** - The URI to receive the updates to the topic.
-
-`hub.secret`
-: _Optional_ **string** - A shared secret key that generates a SHA1 HMAC
-of the payload content.  You can verify a push came from GitHub by
-comparing the received body with the contents of the `X-Hub-Signature`
-header.
-
-[pubsub]: http://code.google.com/p/pubsubhubbub/
+[guid]: http://en.wikipedia.org/wiki/Globally_unique_identifier
+[pubsub]: https://github.com/pubsubhubbub/PubSubHubbub
 [post-receive]: http://help.github.com/post-receive-hooks/
-
+[pshb-secret]: https://pubsubhubbub.github.io/PubSubHubbub/pubsubhubbub-core-0.4.html#authednotify
+[events-url]: /webhooks/#events
+[ping-event-url]: /webhooks/#ping-event
+[org-hooks]: /v3/orgs/hooks/

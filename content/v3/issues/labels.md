@@ -1,21 +1,23 @@
 ---
-title: Issue Labels | GitHub API
+title: Issue Labels
 ---
 
-# Labels API
+# Labels
+
+{:toc}
 
 ## List all labels for this repository
 
-    GET /repos/:user/:repo/labels
+    GET /repos/:owner/:repo/labels
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:label) { |h| [h] } %>
 
 ## Get a single label
 
-    GET /repos/:user/:repo/labels/:name
+    GET /repos/:owner/:repo/labels/:name
 
 ### Response
 
@@ -24,38 +26,36 @@ title: Issue Labels | GitHub API
 
 ## Create a label
 
-    POST /repos/:user/:repo/labels
+    POST /repos/:owner/:repo/labels
 
-### Input
+### Parameters
 
-name
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | **Required**. The name of the label.
+`color`|`string` |**Required**.  A 6 character hex code, without the leading `#`, identifying the color.
 
-color
-: _Required_ **string** - 6 character hex code, without a leading `#`.
 
-<%= json :name => "API", :color => "FFFFFF" %>
+<%= json :name => "bug", :color => "f29513" %>
 
 ### Response
 
-<%= headers 201,
-      :Location =>
-"https://api.github.com/repos/user/repo/labels/foo" %>
+<%= headers 201, :Location => get_resource(:label)['url'] %>
 <%= json :label %>
 
 ## Update a label
 
-    PATCH /repos/:user/:repo/labels/:name
+    PATCH /repos/:owner/:repo/labels/:name
 
-### Input
+### Parameters
 
-name
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | The name of the label.
+`color`|`string` | A 6 character hex code, without the leading `#`, identifying the color.
 
-color
-: _Required_ **string** - 6 character hex code, without a leading `#`.
 
-<%= json :name => "API", :color => "FFFFFF" %>
+<%= json :name => "bug", :color => "f29513" %>
 
 ### Response
 
@@ -64,7 +64,7 @@ color
 
 ## Delete a label
 
-    DELETE /repos/:user/:repo/labels/:name
+    DELETE /repos/:owner/:repo/labels/:name
 
 ### Response
 
@@ -72,16 +72,16 @@ color
 
 ## List labels on an issue
 
-    GET /repos/:user/:repo/issues/:number/labels
+    GET /repos/:owner/:repo/issues/:number/labels
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:label) { |h| [h] } %>
 
 ## Add labels to an issue
 
-    POST /repos/:user/:repo/issues/:number/labels
+    POST /repos/:owner/:repo/issues/:number/labels
 
 ### Input
 
@@ -94,16 +94,15 @@ color
 
 ## Remove a label from an issue
 
-    DELETE /repos/:user/:repo/issues/:number/labels/:name
+    DELETE /repos/:owner/:repo/issues/:number/labels/:name
 
 ### Response
 
-<%= headers 200 %>
-<%= json(:label) { |h| [h] } %>
+<%= headers 204 %>
 
 ## Replace all labels for an issue
 
-    PUT /repos/:user/:repo/issues/:number/labels
+    PUT /repos/:owner/:repo/issues/:number/labels
 
 ### Input
 
@@ -118,7 +117,7 @@ Sending an empty array (`[]`) will remove all Labels from the Issue.
 
 ## Remove all labels from an issue
 
-    DELETE /repos/:user/:repo/issues/:number/labels
+    DELETE /repos/:owner/:repo/issues/:number/labels
 
 ### Response
 
@@ -126,9 +125,9 @@ Sending an empty array (`[]`) will remove all Labels from the Issue.
 
 ## Get labels for every issue in a milestone
 
-    GET /repos/:user/:repo/milestones/:number/labels
+    GET /repos/:owner/:repo/milestones/:number/labels
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:label) { |h| [h] } %>

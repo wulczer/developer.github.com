@@ -1,85 +1,144 @@
 ---
-title: Repo Comments | GitHub API
+title: Comments
 ---
 
-# Repo Comments API
+# Comments
+
+{:toc}
 
 ## List commit comments for a repository
 
-Commit Comments leverage [these](#custom-mime-types) custom mime types. You can
-read more about the use of mime types in the API [here](/v3/mime/).
+Commit Comments use [these custom media types](#custom-media-types). You can
+read more about the use of media types in the API [here](/v3/media/).
 
 Comments are ordered by ascending ID.
 
-    GET /repos/:user/:repo/comments
+    GET /repos/:owner/:repo/comments
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:commit_comment) { |h| [h] } %>
+
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-commits-comments"></a>
+
+  An additional `reactions` object in the commit comment payload is currently available for developers to preview.
+  During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :commit_comment_reaction_summary %>
+{% endif %}
 
 ## List comments for a single commit
 
-    GET /repos/:user/:repo/commits/:sha/comments
+    GET /repos/:owner/:repo/commits/:ref/comments
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:commit_comment) { |h| [h] } %>
+
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-commit-comments"></a>
+
+  An additional `reactions` object in the commit comment payload is currently available for developers to preview.
+  During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :commit_comment_reaction_summary %>
+{% endif %}
 
 ## Create a commit comment
 
-    POST /repos/:user/:repo/commits/:sha/comments
+    POST /repos/:owner/:repo/commits/:sha/comments
 
 ### Input
 
-body
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`body`|`string` | **Required**. The contents of the comment.
+`path`|`string` | Relative path of the file to comment on.
+`position`|`integer` | Line index in the diff to comment on.
+`line`|`integer` | **Deprecated**. Use **position** parameter instead. Line number in the file to comment on.
 
-commit_id
-: _Required_ **string** - Sha of the commit to comment on.
-
-line
-: _Required_ **number** - Line number in the file to comment on.
-
-path
-: _Required_ **string** - Relative path of the file to comment on.
-
-position
-: _Required_ **number** - Line index in the diff to comment on.
 
 #### Example
 
 <%= json \
-  :body      => 'Nice change',
-  :commit_id => '6dcb09b5b57875f334f61aebed695e2e4193db5e',
-  :line      => 1,
+  :body      => 'Great stuff',
   :path      => 'file1.txt',
-  :position  => 4
+  :position  => 4,
+  :line      => nil
 %>
 
 ### Response
 
-<%= headers 201, :Location => "https://api.github.com/user/repo/comments/1" %>
+<%= headers 201, :Location => get_resource(:commit_comment)['url'] %>
 <%= json :commit_comment %>
 
 ## Get a single commit comment
 
-    GET /repos/:user/:repo/comments/:id
+    GET /repos/:owner/:repo/comments/:id
 
 ### Response
 
 <%= headers 200 %>
 <%= json :commit_comment %>
 
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-commit-comment"></a>
+
+  An additional `reactions` object in the commit comment payload is currently available for developers to preview.
+  During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :commit_comment_reaction_summary %>
+{% endif %}
+
 ## Update a commit comment
 
-    PATCH /repos/:user/:repo/comments/:id
+    PATCH /repos/:owner/:repo/comments/:id
 
 ### Input
 
-body
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`body`|`string` | **Required**. The contents of the comment
+
 
 #### Example
 
@@ -90,20 +149,20 @@ body
 ### Response
 
 <%= headers 200 %>
-<%= json :commit_comment %>
+<%= json(:commit_comment) { |h| h.merge('body' => 'Nice change') } %>
 
 ## Delete a commit comment
 
-    DELETE /repos/:user/:repo/comments/:id
+    DELETE /repos/:owner/:repo/comments/:id
 
 ### Response
 
 <%= headers 204 %>
 
-## Custom Mime Types
+## Custom media types
 
-These are the supported mime types for commit comments. You can read more
-about the use of mime types in the API [here](/v3/mime/).
+These are the supported media types for commit comments. You can read more
+about the use of media types in the API [here](/v3/media/).
 
     application/vnd.github-commitcomment.raw+json
     application/vnd.github-commitcomment.text+json

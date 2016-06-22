@@ -1,38 +1,47 @@
 ---
-title: Repos | GitHub API
+title: Repositories
 ---
 
-# Repos API
+# Repositories
+
+{:toc}
 
 ## List your repositories
 
-List repositories for the authenticated user.
+List repositories that are accessible to the authenticated user.
+
+This includes repositories owned by the authenticated user, repositories where
+the authenticated user is a collaborator, and repositories that the
+authenticated user has access to through an organization membership.
 
     GET /user/repos
 
 ### Parameters
 
-type
-: `all`, `owner`, `public`, `private`, `member`. Default: `all`.
-
-sort
-: `created`, `updated`, `pushed`, `full_name`, default: `created`.
-
-direction
-: `asc` or `desc`, default: when using `full_name`: `asc`, otherwise `desc`.
+Name | Type | Description
+-----|------|--------------
+`visibility` | `string` | Can be one of `all`, `public`, or `private`. Default: `all`
+`affiliation` | `string` | Comma-separated list of values. Can include:<br />* `owner`: Repositories that are owned by the authenticated user.<br />* `collaborator`: Repositories that the user has been added to as a collaborator.<br />* `organization_member`: Repositories that the user has access to through being a member of an organization. This includes every repository on every team that the user is on.<br /><br />Default: `owner,collaborator,organization_member`
+`type`|`string` | Can be one of `all`, `owner`, `public`, `private`, `member`. Default: `all`<br /><br />Will cause a `422` error if used in the same request as **visibility** or **affiliation**.
+`sort`|`string` | Can be one of `created`, `updated`, `pushed`, `full_name`. Default: `full_name`
+`direction`|`string` | Can be one of `asc` or `desc`. Default: when using `full_name`: `asc`; otherwise `desc`
 
 ## List user repositories
 
 List public repositories for the specified user.
 
-    GET /users/:user/repos
+    GET /users/:username/repos
 
 ### Parameters
 
-type
-: `all`, `owner`, `member`. Default: `all`.
+Name | Type | Description
+-----|------|-------------
+`type`|`string` | Can be one of `all`, `owner`, `member`. Default: `owner`
+`sort`|`string` | Can be one of `created`, `updated`, `pushed`, `full_name`. Default: `full_name`
+`direction`|`string` | Can be one of `asc` or `desc`. Default: when using `full_name`: `asc`, otherwise `desc`
 
-## List organization repositories.
+
+## List organization repositories
 
 List repositories for the specified org.
 
@@ -40,13 +49,50 @@ List repositories for the specified org.
 
 ### Parameters
 
-type
-: `all`, `public`, `member`, `private`. Default: `all`.
+Name | Type | Description
+-----|------|--------------
+`type`|`string` | Can be one of `all`, `public`, `private`, `forks`, `sources`, `member`. Default: `all`
+
 
 ### Response
 
-<%= headers 200, :pagination => true %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:repo) { |h| [h] } %>
+
+## List all public repositories
+
+This provides a dump of every public repository, in the order that they were created.
+
+Note: Pagination is powered exclusively by the `since` parameter.
+Use the [Link header](/v3/#link-header) to get the URL for the next page of
+repositories.
+
+{% if page.version != 'dotcom' and page.version >= 2.3 %}
+
+If you are an [authenticated](/v3/#authentication) site administrator for your Enterprise instance,
+you will be able to list all repositories including private repositories.
+
+### Parameters
+
+Name | Type | Description
+-----|------|--------------
+`visibility`|`string`| To include private repositories as well set to `all`. Default: `public`
+
+{% endif %}
+
+    GET /repositories
+
+### Parameters
+
+Name | Type | Description
+-----|------|--------------
+`since`|`string`| The integer ID of the last Repository that you've seen.
+
+
+### Response
+
+<%= headers 200, :pagination => { :next => 'https://api.github.com/repositories?since=364' } %>
+<%= json(:simple_repo) { |h| [h] } %>
 
 ## Create
 
@@ -55,46 +101,38 @@ Create a new repository for the authenticated user.
     POST /user/repos
 
 Create a new repository in this organization. The authenticated user must
-be a member of `:org`.
+be a member of the specified organization.
 
     POST /orgs/:org/repos
 
+### OAuth scope requirements
+
+When using [OAuth](/v3/oauth/#scopes), authorizations must include:
+
+- `public_repo` scope or `repo` scope to create a public repository
+- `repo` scope to create a private repository
+
 ### Input
 
-name
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | **Required**. The name of the repository
+`description`|`string` | A short description of the repository
+`homepage`|`string` | A URL with more information about the repository
+`private`|`boolean` | Either `true` to create a private repository, or `false` to create a public one. Creating private repositories requires a paid GitHub account.  Default: `false`
+`has_issues`|`boolean` | Either `true` to enable issues for this repository, `false` to disable them. Default: `true`
+`has_wiki`|`boolean` | Either `true` to enable the wiki for this repository, `false` to disable it. Default: `true`
+`has_downloads`|`boolean` | Either `true` to enable downloads for this repository, `false` to disable them. Default: `true`
+`team_id`|`integer` | The id of the team that will be granted access to this repository. This is only valid when creating a repository in an organization.
+`auto_init`|`boolean` | Pass `true` to create an initial commit with empty README. Default: `false`
+`gitignore_template`|`string` | Desired language or platform [.gitignore template](https://github.com/github/gitignore) to apply. Use the name of the template without the extension. For example, "Haskell".
+`license_template`|`string` | Desired [LICENSE template](https://github.com/github/choosealicense.com) to apply. Use the [name of the template](https://github.com/github/choosealicense.com/tree/gh-pages/_licenses) without the extension. For example, "mit" or "mozilla".
 
-description
-: _Optional_ **string**
-
-homepage
-: _Optional_ **string**
-
-private
-: _Optional_ **boolean** - `true` to create a private repository, `false`
-to create a public one. Creating private repositories requires a paid
-GitHub account.  Default is `false`.
-
-has\_issues
-: _Optional_ **boolean** - `true` to enable issues for this repository,
-`false` to disable them. Default is `true`.
-
-has\_wiki
-: _Optional_ **boolean** - `true` to enable the wiki for this
-repository, `false` to disable it. Default is `true`.
-
-has\_downloads
-: _Optional_ **boolean** - `true` to enable downloads for this
-repository, `false` to disable them. Default is `true`.
-
-team\_id
-: _Optional_ **number** - The id of the team that will be granted access
-to this repository. This is only valid when creating a repo in an
-organization.
+#### Example
 
 <%= json \
   :name          => "Hello-World",
-  :description   => "This is your first repo",
+  :description   => "This is your first repository",
   :homepage      => "https://github.com",
   :private       => false,
   :has_issues    => true,
@@ -104,56 +142,46 @@ organization.
 
 ### Response
 
-<%= headers 201,
-      :Location =>
-'https://api.github.com/repos/octocat/Hello-World' %>
+<%= headers 201, :Location => get_resource(:repo)['url'] %>
 <%= json :repo %>
 
 ## Get
 
-    GET /repos/:user/:repo
+    GET /repos/:owner/:repo
 
 ### Response
+
+The `parent` and `source` objects are present when the repository is a fork.
+`parent` is the repository this repository was forked from,
+`source` is the ultimate source for the network.
 
 <%= headers 200 %>
 <%= json :full_repo %>
 
 ## Edit
 
-    PATCH /repos/:user/:repo
+    PATCH /repos/:owner/:repo
 
 ### Input
 
-name
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | **Required**. The name of the repository
+`description`|`string` | A short description of the repository
+`homepage`|`string` | A URL with more information about the repository
+`private`|`boolean` | Either `true` to make the repository private, or `false` to make it public. Creating private repositories requires a paid GitHub account.  Default: `false`
+`has_issues`|`boolean` | Either `true` to enable issues for this repository, `false` to disable them. Default: `true`
+`has_wiki`|`boolean` |  Either `true` to enable the wiki for this repository, `false` to disable it. Default: `true`
+`has_downloads`|`boolean` | Either `true` to enable downloads for this repository, `false` to disable them. Default: `true`
+`default_branch`|`String` | Updates the default branch for this repository.
 
-description
-: _Optional_ **string**
-
-homepage
-: _Optional_ **string**
-
-private
-: _Optional_ **boolean** - `true` makes the repository private, and
-`false` makes it public.
-
-has\_issues
-: _Optional_ **boolean** - `true` to enable issues for this repository,
-`false` to disable them. Default is `true`.
-
-has\_wiki
-: _Optional_ **boolean** - `true` to enable the wiki for this
-repository, `false` to disable it. Default is `true`.
-
-has\_downloads
-: _Optional_ **boolean** - `true` to enable downloads for this
-repository, `false` to disable them. Default is `true`.
+#### Example
 
 <%= json \
   :name          => "Hello-World",
-  :description   => "This is your first repo",
+  :description   => "This is your first repository",
   :homepage      => "https://github.com",
-  :public        => true,
+  :private       => true,
   :has_issues    => true,
   :has_wiki      => true,
   :has_downloads => true
@@ -166,22 +194,35 @@ repository, `false` to disable them. Default is `true`.
 
 ## List contributors
 
-    GET /repos/:user/:repo/contributors
+List contributors to the specified repository, sorted by the number of commits per contributor in descending order.
+
+{{#tip}}
+
+Contributors data is cached for performance reasons. This endpoint may return information that is a few hours old.
+
+Git contributors are identified by author email address. This API attempts to group contribution counts by GitHub user, across all of their associated email addresses. For performance reasons, only the first 500 author email addresses in the repository will be linked to GitHub users. The rest will appear as anonymous contributors without associated GitHub user information.
+
+{{/tip}}
+
+    GET /repos/:owner/:repo/contributors
 
 ### Parameters
 
-anon
-: Optional flag. Set to `1` or `true` to include anonymous contributors
-in results.
+Name | Type | Description
+-----|------|-------------
+`anon`|`string` | Set to `1` or `true` to include anonymous contributors in results.
+
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:contributor) { |h| [h] } %>
 
 ## List languages
 
-    GET /repos/:user/:repo/languages
+List languages for the specified repository. The value on the right of a language is the number of bytes of code written in that language.
+
+    GET /repos/:owner/:repo/languages
 
 ### Response
 
@@ -193,27 +234,145 @@ in results.
 
 ## List Teams
 
-    GET /repos/:user/:repo/teams
+    GET /repos/:owner/:repo/teams
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:team) { |h| [h] } %>
 
 ## List Tags
 
-    GET /repos/:user/:repo/tags
+    GET /repos/:owner/:repo/tags
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:tag) { |h| [h] } %>
 
 ## List Branches
 
-    GET /repos/:user/:repo/branches
+    GET /repos/:owner/:repo/branches
+
+### Parameters
+
+Name | Type | Description
+-----|------|-------------
+`protected`|`string` | Set to `1` or `true` to only return protected branches.
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  The `protected` parameter is currently available for developers to preview.
+  During the preview period, the API may change without advance notice.
+  Please see the [blog post](/changes/2015-11-11-protected-branches-api) for full details.
+
+  To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.loki-preview+json
+
+  The `protection` key will only be present in branch payloads if this header is passed.
+
+{{/tip}}
 
 ### Response
 
+<%= headers 200, :pagination => default_pagination_rels %>
+<%= json(:branches) %>
+
+## Get Branch
+
+    GET /repos/:owner/:repo/branches/:branch
+
+### Response
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  The Protected Branch API is currently available for developers to preview.
+  During the preview period, the API may change without advance notice.
+  Please see the [blog post](/changes/2015-11-11-protected-branches-api) for full details.
+
+  To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.loki-preview+json
+
+  The `protection` key will only be present in branch payloads if this header is passed.
+
+{{/tip}}
+
 <%= headers 200 %>
-<%= json(:branch) { |h| [h] }%>
+<%= json(:branch) %>
+
+{% if page.version == 'dotcom' or page.version >= 2.5 %}
+
+## Enabling and disabling branch protection
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  The Protected Branch API is currently available for developers to preview.
+  During the preview period, the API may change without advance notice.
+  Please see the [blog post](/changes/2015-11-11-protected-branches-api) for full details.
+
+  To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.loki-preview+json
+
+{{/tip}}
+
+Protecting a branch requires admin access.
+
+    PATCH /repos/:owner/:repo/branches/:branch
+
+### Input
+
+You need to pass a `protection` object.
+
+Name | Type | Description
+-----|------|-------------
+`enabled`|`boolean` | **Required**. Should this branch be protected or not
+`required_status_checks`|`object`| Configure required status checks here
+
+The `required_status_checks` object must have the following keys:
+
+Name | Type | Description
+-----|------|-------------
+`enforcement_level`|`string` | **Required**. Who required status checks apply to. Options are `off`, `non_admins` or `everyone`.
+`contexts`|`array` | **Required**. The list of status checks to require in order to merge into this branch
+
+The `enforcement_level` key can have the following values:
+
+Name  | Description
+------|------------
+`off` | Turn off required status checks for this branch.
+`non_admins` | Required status checks will be enforced for non-admins.
+`everyone` | Required status checks will be enforced for everyone (including admins).
+
+#### Example
+
+<%= json \
+  "protection" => {
+    "enabled" => true,
+    "required_status_checks" => {
+      "enforcement_level" => "everyone",
+      "contexts" => ["continuous-integration/travis-ci"]
+    }
+  }
+%>
+
+{% endif %}
+
+## Delete a Repository
+
+Deleting a repository requires admin access.  If OAuth is used, the
+`delete_repo` scope is required.
+
+    DELETE /repos/:owner/:repo
+
+### Response
+
+<%= headers 204 %>

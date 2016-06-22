@@ -1,158 +1,254 @@
 ---
-title: Issues | GitHub API
+title: Issues
 ---
 
-# Issues API
+# Issues
 
-Issues leverage [these](#custom-mime-types) custom mime types. You can
-read more about the use of mime types in the API [here](/v3/mime/).
+{:toc}
 
-## List your issues
+Issues use [these custom media types](#custom-media-types). You can
+read more about the use of media types in the API [here](/v3/media/).
+
+## List issues
+
+<%= fetch_content(:prs_as_issues) %>
+
+List all issues **assigned** to the authenticated user across all visible repositories
+including owned repositories, member repositories, and organization
+repositories:
 
     GET /issues
 
+{{#tip}}
+
+You can use the `filter` query parameter to fetch issues that are not necessarily assigned to you. See the table below for more information.
+
+{{/tip}}
+
+List all issues across owned and member repositories assigned to the authenticated user:
+
+    GET /user/issues
+
+List all issues for a given organization assigned to the authenticated user:
+
+    GET /orgs/:org/issues
+
 ### Parameters
 
-filter
-: * `assigned`: Issues assigned to you (default)
-  * `created`: Issues created by you
-  * `mentioned`: Issues mentioning you
-  * `subscribed`: Issues you're subscribed to updates for
-
-state
-: `open`, `closed`, default: `open`
-
-labels
-: _String_ list of comma separated Label names.  Example:
-`bug,ui,@high`
-
-sort
-: `created`, `updated`, `comments`, default: `created`.
-
-direction
-: `asc` or `desc`, default: `desc`.
-
-since
-: _Optional_ **string** of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ
+Name | Type | Description
+-----|------|--------------
+`filter`|`string`| Indicates which sorts of issues to return. Can be one of:<br/>* `assigned`: Issues assigned to you<br/>* `created`: Issues created by you<br/>* `mentioned`: Issues mentioning you<br/>* `subscribed`: Issues you're subscribed to updates for<br/>* `all`: All issues the authenticated user can see, regardless of participation or creation<br/> Default: `assigned`
+`state`|`string`| Indicates the state of the issues to return. Can be either `open`, `closed`, or `all`. Default: `open`
+`labels`|`string`| A list of comma separated label names.  Example: `bug,ui,@high`
+`sort`|`string`|  What to sort results by. Can be either `created`, `updated`, `comments`. Default: `created`
+`direction`|`string`| The direction of the sort. Can be either `asc` or `desc`. Default: `desc`
+`since`|`string` | Only issues updated at or after this time are returned. This is a timestamp in ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ`.
 
 ### Response
 
-<%= headers 200, :pagination => true %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:issue) { |h| [h] } %>
+
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-org-issues"></a>
+
+  An additional `reactions` object in the issue payload is currently available for developers to preview. During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :issue_reaction_summary %>
+{% endif %}
 
 ## List issues for a repository
 
-    GET /repos/:user/:repo/issues
+<%= fetch_content(:prs_as_issues) %>
+
+    GET /repos/:owner/:repo/issues
 
 ### Parameters
 
-milestone
-: * _Integer_ Milestone number
-  * `none` for Issues with no Milestone.
-  * `*` for Issues with any Milestone.
-
-state
-: `open`, `closed`, default: `open`
-
-assignee
-: * _String_ User login
-  * `none` for Issues with no assigned User.
-  * `*` for Issues with any assigned User.
-
-mentioned
-: _String_ User login.
-
-labels
-: _String_ list of comma separated Label names.  Example:
-`bug,ui,@high`
-
-sort
-: `created`, `updated`, `comments`, default: `created`
-
-direction
-: `asc` or `desc`, default: `desc`.
-
-since
-: _Optional_ **string** of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ
+Name | Type | Description
+-----|------|--------------
+`milestone`|`integer` or `string`| If an `integer` is passed, it should refer to a milestone by its `number` field. If the string `*` is passed, issues with any milestone are accepted. If the string `none` is passed, issues without milestones are returned.
+`state`|`string`| Indicates the state of the issues to return. Can be either `open`, `closed`, or `all`. Default: `open`
+`assignee`|`string`| Can be the name of a user. Pass in `none` for issues with no assigned user, and `*` for issues assigned to any user.
+`creator`|`string`| The user that created the issue.
+`mentioned`|`string`| A user that's mentioned in the issue.
+`labels`|`string`| A list of comma separated label names.  Example: `bug,ui,@high`
+`sort`|`string`|  What to sort results by. Can be either `created`, `updated`, `comments`. Default: `created`
+`direction`|`string`| The direction of the sort. Can be either `asc` or `desc`. Default: `desc`
+`since`|`string` |Only issues updated at or after this time are returned. This is a timestamp in ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ`.
 
 ### Response
 
-<%= headers 200, :pagination => true %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:issue) { |h| [h] } %>
+
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-repo-issues"></a>
+
+  An additional `reactions` object in the issue payload is currently available for developers to preview.
+  During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :issue_reaction_summary %>
+{% endif %}
 
 ## Get a single issue
 
-    GET /repos/:user/:repo/issues/:number
+<%= fetch_content(:prs_as_issues) %>
+
+    GET /repos/:owner/:repo/issues/:number
 
 ### Response
 
 <%= headers 200 %>
-<%= json :issue %>
+<%= json :full_issue %>
+
+{% if page.version == 'dotcom' %}
+#### Reactions summary
+
+{{#tip}}
+
+  <a name="preview-period-issue"></a>
+
+  An additional `reactions` object in the issue payload is currently available for developers to preview.
+  During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-05-12-reactions-api-preview) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.squirrel-girl-preview
+
+  The `reactions` key will have the following payload where `url` can be used to construct the API location for [listing and creating](/v3/reactions) reactions.
+
+{{/tip}}
+<%= json :issue_reaction_summary %>
+{% endif %}
 
 ## Create an issue
 
-    POST /repos/:user/:repo/issues
+Any user with pull access to a repository can create an issue.
 
-### Input
+    POST /repos/:owner/:repo/issues
 
-title
-: _Required_ **string**
+### Parameters
 
-body
-: _Optional_ **string**
+Name | Type | Description
+-----|------|--------------
+`title`|`string` | **Required**. The title of the issue.
+`body`|`string` | The contents of the issue.
+`assignee`|`string` | Login for the user that this issue should be assigned to. _NOTE: Only users with push access can set the assignee for new issues. The assignee is silently dropped otherwise._
+`milestone`|`integer` | The `number` of the milestone to associate this issue with. _NOTE: Only users with push access can set the milestone for new issues. The milestone is silently dropped otherwise._
+`labels`|`array` of `strings` | Labels to associate with this issue. _NOTE: Only users with push access can set labels for new issues. Labels are silently dropped otherwise._
+`assignees`|`array` of `strings` | Logins for Users to assign to this issue. _NOTE: Only users with push access can set assignees for new issues. Assignees are silently dropped otherwise._
 
-assignee
-: _Optional_ **string** - Login for the user that this issue should be
-assigned to.
+{{#tip}}
 
-milestone
-: _Optional_ **number** - Milestone to associate this issue with.
+<a name="preview-period"></a>
 
-labels
-: _Optional_ **array** of **strings** - Labels to associate with this
-issue.
+The `assignees` parameter is currently available for developers to preview.
+During the preview period, the API may change without advance notice.
+Please see the [blog post](/changes/2016-5-27-multiple-assignees) for full details.
+
+To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+    application/vnd.github.cerberus-preview+json
+
+The `assignees` key will only be accepted in issue payloads if this header is passed.
+
+{{/tip}}
+
+#### Example
 
 <%= json \
   :title     => "Found a bug",
   :body      => "I'm having a problem with this.",
   :assignee  => "octocat",
   :milestone => 1,
-  :labels    => %w(Label1 Label2)
+  :labels    => %w(bug)
 %>
 
 ### Response
 
-<%= headers 201,
-      :Location =>
-'https://api.github.com/repos/user/repo/issues/1' %>
-<%= json :issue %>
+<%= headers 201, :Location => get_resource(:full_issue)['url'] %>
+<%= json :full_issue %>
+
+{% if page.version == 'dotcom' %}
+#### Multiple Assignees
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  An additional `assignees` object in the issue payload is currently available for developers to preview. During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-5-27-multiple-assignees) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.cerberus-preview
+
+  The `assignees` key will be an Array of Users who are assigned to the issue.
+
+{{/tip}}
+{% endif %}
 
 ## Edit an issue
 
-    PATCH /repos/:user/:repo/issues/:number
+Issue owners and users with push access can edit an issue.
 
-### Input
+    PATCH /repos/:owner/:repo/issues/:number
 
-title
-: _Optional_ **string**
+### Parameters
 
-body
-: _Optional_ **string**
+Name | Type | Description
+-----|------|--------------
+`title`|`string` | The title of the issue.
+`body`|`string` | The contents of the issue.
+`assignee`|`string` | Login for the user that this issue should be assigned to.
+`state`|`string` | State of the issue. Either `open` or `closed`.
+`milestone`|`integer` | The `number` of the milestone to associate this issue with or `null` to remove current. _NOTE: Only users with push access can set the milestone for issues. The milestone is silently dropped otherwise._
+`labels`|`array` of `strings` | Labels to associate with this issue. Pass one or more Labels to _replace_ the set of Labels on this Issue. Send an empty array (`[]`) to clear all Labels from the Issue. _NOTE: Only users with push access can set labels for issues. Labels are silently dropped otherwise._
+`assignees`|`array` of `strings` | Logins for Users to assign to this issue. Pass one or more user logins to _replace_ the set of assignees on this Issue. .Send an empty array (`[]`) to clear all assignees from the Issue. _NOTE: Only users with push access can set assignees for new issues. Assignees are silently dropped otherwise._
 
-assignee
-: _Optional_ **string** - Login for the user that this issue should be
-assigned to.
+{{#tip}}
 
-state
-: _Optional_ **string** - State of the issue: `open` or `closed`.
+<a name="preview-period"></a>
 
-milestone
-: _Optional_ **number** - Milestone to associate this issue with.
+The `assignees` parameter is currently available for developers to preview.
+During the preview period, the API may change without advance notice.
+Please see the [blog post](/changes/2016-5-27-multiple-assignees) for full details.
 
-labels
-: _Optional_ **array** of **strings** - Labels to associate with this
-issue. Pass one or more Labels to _replace_ the set of Labels on this
-Issue. Send an empty array (`[]`) to clear all Labels from the Issue.
+To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+    application/vnd.github.cerberus-preview+json
+
+The `assignees` key will only be present in issue payloads if this header is passed.
+
+{{/tip}}
+
+#### Example
 
 <%= json \
   :title     => "Found a bug",
@@ -160,18 +256,91 @@ Issue. Send an empty array (`[]`) to clear all Labels from the Issue.
   :assignee  => "octocat",
   :milestone => 1,
   :state     => "open",
-  :labels    => %w(Label1 Label2)
+  :labels    => %w(bug)
 %>
 
 ### Response
 
 <%= headers 200 %>
-<%= json :issue %>
+<%= json :full_issue %>
 
-## Custom Mime Types
+{% if page.version == 'dotcom' %}
+#### Multiple Assignees
 
-These are the supported mime types for issues. You can read more about the
-use of mime types in the API [here](/v3/mime/).
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  An additional `assignees` object in the issue payload is currently available for developers to preview. During the preview period, the APIs may change without advance notice.
+  Please see the [blog post](/changes/2016-5-27-multiple-assignees) for full details.
+
+  To access the API you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.cerberus-preview
+
+  The `assignees` key will be an Array of Users who are assigned to the issue.
+
+{{/tip}}
+{% endif %}
+
+{% if page.version == 'dotcom' %}
+
+## Lock an issue
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  The API to lock an issue is currently available for developers to preview.
+  During the preview period, the API may change without advance notice.
+  Please see the [blog post](/changes/2016-02-11-issue-locking-api) for full details.
+
+  To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.the-key-preview+json
+
+{{/tip}}
+
+Users with push access can lock an issue's conversation.
+
+    PUT /repos/:owner/:repo/issues/:number/lock
+
+<%= fetch_content(:put_content_length) %>
+
+### Response
+
+<%= headers 204 %>
+
+## Unlock an issue
+
+{{#tip}}
+
+  <a name="preview-period"></a>
+
+  The API to unlock an issue is currently available for developers to preview.
+  During the preview period, the API may change without advance notice.
+  Please see the [blog post](/changes/2016-02-11-issue-locking-api) for full details.
+
+  To access the API during the preview period, you must provide a custom [media type](/v3/media) in the `Accept` header:
+
+      application/vnd.github.the-key-preview+json
+
+{{/tip}}
+
+Users with push access can unlock an issue's conversation.
+
+    DELETE /repos/:owner/:repo/issues/:number/lock
+
+### Response
+
+<%= headers 204 %>
+
+{% endif %}
+
+## Custom media types
+
+These are the supported media types for issues. You can read more about the
+use of media types in the API [here](/v3/media/).
 
     application/vnd.github.VERSION.raw+json
     application/vnd.github.VERSION.text+json

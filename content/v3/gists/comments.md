@@ -1,12 +1,14 @@
 ---
-title: Gist Comments | GitHub API
+title: Gist Comments
 ---
 
-# Gist Comments API
+# Comments
 
-Gist Comments leverage [these](#custom-mime-types) custom mime types.
-You can read more about the use of mime types in the API
-[here](/v3/mime/).
+{:toc}
+
+Gist Comments use [these custom media types](#custom-media-types).
+You can read more about the use of media types in the API
+[here](/v3/media/).
 
 ## List comments on a gist
 
@@ -14,12 +16,12 @@ You can read more about the use of mime types in the API
 
 ### Response
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json(:gist_comment) { |h| [h] } %>
 
 ## Get a single comment
 
-    GET /gists/comments/:id
+    GET /gists/:gist_id/comments/:id
 
 ### Response
 
@@ -30,27 +32,30 @@ You can read more about the use of mime types in the API
 
     POST /gists/:gist_id/comments
 
-### Input
+### Parameters
 
-body
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`body`|`string` | **Required**. The comment text.
+
 
 <%= json :body => 'Just commenting for the sake of commenting' %>
 
 ### Response
 
-<%= headers 201,
-      :Location => "https://api.github.com/gists/comments/1" %>
+<%= headers 201, :Location => get_resource(:gist_comment)['url'] %>
 <%= json :gist_comment %>
 
 ## Edit a comment
 
-    PATCH /gists/comments/:id
+    PATCH /gists/:gist_id/comments/:id
 
 ### Input
 
-body
-: _Required_ **string**
+Name | Type | Description
+-----|------|--------------
+`body`|`string` | **Required**. The comment text.
+
 
 <%= json :body => 'Just commenting for the sake of commenting' %>
 
@@ -61,16 +66,16 @@ body
 
 ## Delete a comment
 
-    DELETE /gists/comments/:id
+    DELETE /gists/:gist_id/comments/:id
 
 ### Response
 
 <%= headers 204 %>
 
-## Custom Mime Types
+## Custom media types
 
-These are the supported mime types for gist comments. You can read more about the
-use of mime types in the API [here](/v3/mime/).
+These are the supported media types for gist comments. You can read more about the
+use of media types in the API [here](/v3/media/).
 
     application/vnd.github.VERSION.raw+json
     application/vnd.github.VERSION.text+json

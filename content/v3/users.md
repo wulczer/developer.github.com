@@ -1,20 +1,25 @@
 ---
-title: Users | GitHub API
+title: Users
 ---
 
-# Users API
+# Users
+
+{:toc}
 
 Many of the resources on the users API provide a shortcut for getting
 information about the currently authenticated user. If a request URL
-does not include a `:user` parameter then the response will be for the
+does not include a `:username` parameter then the response will be for the
 logged in user (and you must pass [authentication
 information](/v3/#authentication) with your request).
 
 ## Get a single user
 
-    GET /users/:user
+    GET /users/:username
 
 ### Response
+
+Note: The returned email is the user's publicly visible email address
+(or `null` if the user has not [specified a public email address in their profile](https://github.com/settings/profile)).
 
 <%= headers 200 %>
 <%= json :full_user %>
@@ -32,28 +37,19 @@ information](/v3/#authentication) with your request).
 
     PATCH /user
 
-### Input
+### Parameters
 
-name
-: _Optional_ **string**
+Name | Type | Description
+-----|------|--------------
+`name`|`string` | The new name of the user
+`email`|`string` | Publicly visible email address.
+`blog`|`string` | The new blog URL of the user.
+`company`|`string` | The new company of the user.
+`location`|`string` | The new location of the user.
+`hireable`|`boolean` | The new hiring availability of the user.
+`bio`|`string` | The new short biography of the user.
 
-email
-: _Optional_ **string** - Publicly visible email address.
-
-blog
-: _Optional_ **string**
-
-company
-: _Optional_ **string**
-
-location
-: _Optional_ **string**
-
-hireable
-: _Optional_ **boolean**
-
-bio
-: _Optional_ **string**
+#### Example
 
 <%= json \
     :name     => "monalisa octocat",
@@ -70,3 +66,24 @@ bio
 <%= headers 200 %>
 <%= json :private_user %>
 
+## Get all users
+
+Lists all users, in the order that they signed up on {{ site.data.variables.product.product_name }}.
+
+Note: Pagination is powered exclusively by the `since` parameter.
+Use the [Link header](/v3/#link-header) to get the URL for the next page of
+users.
+
+    GET /users
+
+### Parameters
+
+Name | Type | Description
+-----|------|--------------
+`since`|`string`| The integer ID of the last User that you've seen.
+
+
+### Response
+
+<%= headers 200, :pagination => { :next => 'https://api.github.com/users?since=135' } %>
+<%= json(:user) { |h| [h] } %>

@@ -1,56 +1,70 @@
 ---
-title: Repo Deploy Keys | GitHub API
+title: Deploy Keys
 ---
 
-# Repo Deploy Keys API
+# Deploy Keys
 
-## List
+{:toc}
 
-    GET /repos/:user/:repo/keys
+<a id="list" />
+
+## List deploy keys
+
+    GET /repos/:owner/:repo/keys
+
+### Response
+
+<%= headers 200, :pagination => default_pagination_rels %>
+<%= json(:deploy_key) { |h| [h] } %>
+
+<a id="get" />
+
+## Get a deploy key
+
+    GET /repos/:owner/:repo/keys/:id
 
 ### Response
 
 <%= headers 200 %>
-<%= json(:public_key) { |h| [h] } %>
+<%= json :deploy_key %>
 
-## Get
+<a id="create" />
 
-    GET /repos/:user/:repo/keys/:id
+## Add a new deploy key
 
-### Response
+    POST /repos/:owner/:repo/keys
 
-<%= headers 200 %>
-<%= json :public_key %>
+### Parameters
 
-## Create
+Name | Type | Description
+-----|------|-------------
+`title`|`string`|A name for the key.
+`key`|`string`|The contents of the key.
+`read_only`|`boolean`|If `true`, the key will only be able to read repository contents. Otherwise, the key will be able to read and write.
 
-    POST /repos/:user/:repo/keys
+#### Example
 
-### Input
+Here's how you can create a read-only deploy key:
 
-<%= json :title => "octocat@octomac", :key => "ssh-rsa AAA..." %>
-
-### Response
-
-<%= headers 201, :Location => "https://api.github.com/user/repo/keys/1" %>
-<%= json :public_key %>
-
-## Edit
-
-    PATCH /repos/:user/:repo/keys/:id
-
-### Input
-
-<%= json :title => "octocat@octomac", :key => "ssh-rsa AAA..." %>
+<%= json :title => "octocat@octomac", :key => "ssh-rsa AAA...", :read_only => true %>
 
 ### Response
 
-<%= headers 200 %>
-<%= json :public_key %>
+<%= headers 201, :Location => get_resource(:deploy_key)['url'] %>
+<%= json :deploy_key %>
 
-## Delete
+<a id="edit" />
 
-    DELETE /repos/:user/:repo/keys/:id
+## Edit a deploy key
+
+Deploy keys are immutable. If you need to update a key, [remove the
+key](#remove-a-deploy-key) and [create a new one](#add-a-new-deploy-key) instead.
+
+<a id="delete" />
+
+## Remove a deploy key
+
+    DELETE /repos/:owner/:repo/keys/:id
 
 ### Response
 

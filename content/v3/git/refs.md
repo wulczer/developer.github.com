@@ -1,25 +1,42 @@
 ---
-title: Git Refs | GitHub API
+title: Git Refs
 ---
 
-# References API
+# References
+
+{:toc}
 
 ## Get a Reference
 
-    GET /repos/:user/:repo/git/refs/:ref
+    GET /repos/:owner/:repo/git/refs/:ref
 
-The `ref` in the URL must be formatted as `heads/branch`, not just `branch`. For example, the call to get the data for a branch named `sc/featureA` would be:
+The `ref` in the URL must be formatted as `heads/branch`, not just `branch`. For example, the call to get the data for a branch named `skunkworkz/featureA` would be:
 
-    GET /repos/:user/:repo/git/refs/heads/sc/featureA
-
-### Response
+    GET /repos/:owner/:repo/git/refs/heads/skunkworkz/featureA
 
 <%= headers 200 %>
 <%= json :ref %>
 
+If the `ref` doesn't exist in the repository, but existing refs start with `ref`
+they will be returned as an array. For example, a call to get the data for a
+branch named `feature`, which doesn't exist, would return head refs
+including `featureA` and `featureB` which do.
+
+    GET /repos/:owner/:repo/git/refs/heads/feature
+
+<%= headers 200 %>
+<%= json :refs_matching %>
+
+If the `ref` doesn't match an existing ref or any prefixes a 404 will be returned.
+
+    GET /repos/:owner/:repo/git/refs/heads/feature-branch-that-no-longer-exists
+
+<%= headers 404 %>
+<%= json :refs_not_found %>
+
 ## Get all References
 
-    GET /repos/:user/:repo/git/refs
+    GET /repos/:owner/:repo/git/refs
 
 This will return an array of all the references on the system, including
 things like notes and stashes if they exist on the server.  Anything in
@@ -29,50 +46,47 @@ most common.
 You can also request a sub-namespace. For example, to get all the tag
 references, you can call:
 
-    GET /repos/:user/:repo/git/refs/tags
+    GET /repos/:owner/:repo/git/refs/tags
 
 For a full refs listing, you'll get something that looks like:
 
-<%= headers 200 %>
+<%= headers 200, :pagination => default_pagination_rels %>
 <%= json :refs %>
 
 
 ## Create a Reference
 
-    POST /repos/:user/:repo/git/refs
+    POST /repos/:owner/:repo/git/refs
 
 ### Parameters
 
-ref
-: _String_ of the name of the fully qualified reference (ie: `refs/heads/master`).
-  If it doesn't start with 'refs' and have at least two slashes, it will be rejected.
+Name | Type | Description
+-----|------|--------------
+`ref`|`type`| **Required**. The name of the fully qualified reference (ie: `refs/heads/master`). If it doesn't start with 'refs' and have at least two slashes, it will be rejected.
+`sha`|`type`| **Required**. The SHA1 value to set this reference to
 
-sha
-: _String_ of the SHA1 value to set this reference to
 
 ### Input
 
-<%= json "ref"=>"refs/heads/master",\
-         "sha"=>"827efc6d56897b048c772eb4087f854f46256132" %>
+<%= json "ref"=>"refs/heads/featureA",\
+         "sha"=>"aa218f56b14c9653891f9e74264a383fa43fefbd" %>
 
 ### Response
 
-<%= headers 201 %>
-<%= json :refs %>
+<%= headers 201, :Location => get_resource(:ref)['url'] %>
+<%= json :ref %>
 
 ## Update a Reference
 
-    PATCH /repos/:user/:repo/git/refs/:ref
+    PATCH /repos/:owner/:repo/git/refs/:ref
 
 ### Parameters
 
-sha
-: _String_ of the SHA1 value to set this reference to
+Name | Type | Description
+-----|------|--------------
+`sha`|`type`| **Required**. The SHA1 value to set this reference to
+`force`|`boolean`| Indicates whether to force the update or to make sure the update is a fast-forward update. Leaving this out or setting it to `false` will make sure you're not overwriting work. Default: `false`
 
-force
-: _Boolean_ indicating whether to force the update or to make sure the
-update is a fast-forward update. The default is `false`, so leaving this
-out or setting it to `false` will make sure you're not overwriting work.
 
 ### Input
 
@@ -81,13 +95,12 @@ out or setting it to `false` will make sure you're not overwriting work.
 
 ### Response
 
-<%= headers 200, \
-      :Location => "https://api.github.com/git/:user/:repo/commit/:sha" %>
+<%= headers 200 %>
 <%= json :ref %>
 
 ## Delete a Reference
 
-    DELETE /repos/:user/:repo/git/refs/:ref
+    DELETE /repos/:owner/:repo/git/refs/:ref
 
 Example: Deleting a branch:
 
@@ -100,4 +113,3 @@ Example: Deleting a tag:
 ### Response
 
 <%= headers 204 %>
-
